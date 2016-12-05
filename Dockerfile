@@ -1,23 +1,36 @@
 ## Docker file to build app as container
 
-FROM php:5.6-apache
-MAINTAINER "Edward Hunter" <ehunter@usgs.gov>
-LABEL dockerfile_version="v0.1.0"
+FROM centos:centos7
+MAINTAINER "Eric Martinez" <emartinez@usgs.gov>
+LABEL dockerfile_version="v0.2.0"
 
-# install JRE (headless)
-RUN apt-key update -y && \
-    apt-get update -y && \
-    apt-get install -y --no-install-recommends \
-        openjdk-7-jre-headless && \
-    apt-get clean
+# Set this so builds work from within DOI network
+COPY etc/DOIRootCA2.crt /etc/pki/ca-trust/source/anchors/DOIRootCA2.crt
 
-# configure Cairo
-RUN apt-get install -y libcairo2-dev && \
-    pecl install channel://pecl.php.net/cairo-0.3.2 && \
-    echo 'extension=cairo.so' > /usr/local/etc/php/conf.d/cairo.ini
+# Update current system packages and install custom repos for packages later
+RUN yum upgrade -y && \
+    yum updateinfo -y && \
+    yum install -y ca-certificates && \
+    update-ca-trust enable && \
+    update-ca-trust extract && \
+    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
+    rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm && \
+    rpm -Uvh http://rpms.famillecollet.com/enterprise/7/remi/x86_64/remi-release-7.2-1.el7.remi.noarch.rpm && \
+    yum clean all -y
+
+
+# Install primary necessary packages
+RUN yum install -y \
+      httpd \
+      php55w \
+      java-1.7.0-openjdk-headless && \
+    yum --enablerepo=remi install -y php55-php-pecl-cairo && \
+    yum clean all -y
+
 
 # copy application (ignores set in .dockerignore)
 COPY html/. /var/www/html/
 
-WORKDIR /var/www/html/
-EXPOSE 8110
+WORKDIR /var/www/html
+ENTRYPOINT ["httpd"]
+CMD ["-DFOREGROUND"]
