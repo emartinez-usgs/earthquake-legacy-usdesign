@@ -10,22 +10,36 @@ COPY etc/DOIRootCA2.crt /etc/pki/ca-trust/source/anchors/DOIRootCA2.crt
 # Update current system packages and install custom repos for packages later
 RUN yum upgrade -y && \
     yum updateinfo -y && \
-    yum install -y ca-certificates && \
+    yum install -y \
+      ca-certificates \
+      autoconf \
+      gcc \
+      g++ \
+      libc-dev \
+      make \
+      pkg-config \
+      curl \
+      libedit2 \
+      libxml2 \
+      xz-utils \
+      which && \
     update-ca-trust enable && \
-    update-ca-trust extract && \
-    rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
-    rpm -Uvh https://mirror.webtatic.com/yum/el7/webtatic-release.rpm && \
-    rpm -Uvh http://rpms.famillecollet.com/enterprise/7/remi/x86_64/remi-release-7.2-1.el7.remi.noarch.rpm && \
-    yum clean all -y
+    update-ca-trust extract
 
 
 # Install primary necessary packages
 RUN yum install -y \
       httpd \
-      php55w \
-      java-1.7.0-openjdk-headless && \
-    yum --enablerepo=remi install -y php55-php-pecl-cairo && \
-    yum clean all -y
+      php \
+      php-pear \
+      php-devel \
+      cairo-devel \
+      java-1.7.0-openjdk-headless
+
+# Cairo
+RUN pecl channel-update pecl.php.net && \
+    printf "\n" | pecl install channel://pecl.php.net/cairo-0.3.2 && \
+    printf "; Enable Cairo extension module\nextension=cairo.so" > /etc/php.d/cairo.ini
 
 
 # copy application (ignores set in .dockerignore)
